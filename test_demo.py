@@ -4,21 +4,7 @@ from fewshot_re_kit.framework import FewShotREFramework
 from fewshot_re_kit.sentence_encoder import CNNSentenceEncoder, BERTSentenceEncoder, BERTPAIRSentenceEncoder, \
     RobertaSentenceEncoder, RobertaPAIRSentenceEncoder, BERTRelationEncoder
 import models
-from models.proto import Proto
-from models.proto_yuanwen import Proto_YUANWEN
-from models.matpn_tri import MATPN_TRI
-# from models.xiangguanxing import XIANGGUANXING
-# from models.pinjiechaxun import PINJIECHAXUN
-# from models.gnn_get import GnnGet
-# from models.zhengliu import ZhengLiu
-# from models.vae import VAE
-from models.gnn import GNN
-from models.snail import SNAIL
-from models.metanet import MetaNet
-from models.siamese import Siamese
-from models.pair import Pair
-from models.d import Discriminator
-from models.mtb import Mtb
+from models.ubpf import UBPF
 import sys
 import torch
 from torch import optim, nn
@@ -30,7 +16,7 @@ import random
 
 
 # os.environ["CUDA_VISIBLE_DEVICES"] = '1'
-# 固定随机种子，确保每次结果都一样
+# Use a fixed random seed to ensure the same result every time.
 def setseed():
     seed = int(np.random.uniform(0, 1) * 10000000)
     torch.manual_seed(seed)
@@ -43,15 +29,15 @@ def setseed():
 def seed_torch(seed=1234):
     random.seed(seed)  # python seed
     os.environ['PYTHONHASHSEED'] = str(
-        seed)  # 设置python哈希种子，for certain hash-based operations (e.g., the item order in a set or a dict）。seed为0的时候表示不用这个feature，也可以设置为整数。 有时候需要在终端执行，到脚本实行可能就迟了。
+        seed)  
     np.random.seed(
-        seed)  # If you or any of the libraries you are using rely on NumPy, 比如Sampling，或者一些augmentation。 哪些是例外可以看https://pytorch.org/docs/stable/notes/randomness.html
-    torch.manual_seed(seed)  # 为当前CPU设置随机种子。 pytorch官网倒是说(both CPU and CUDA)
-    torch.cuda.manual_seed(seed)  # 为当前GPU设置随机种子
-    torch.cuda.manual_seed_all(seed)  # 使用多块GPU时，均设置随机种子
+        seed)  
+    torch.manual_seed(seed)  
+    torch.cuda.manual_seed(seed)  
+    torch.cuda.manual_seed_all(seed)  
     torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = True  # 设置为True时，cuDNN使用非确定性算法寻找最高效算法
-    torch.backends.cudnn.enabled = True  # pytorch使用CUDANN加速，即使用GPU加速
+    torch.backends.cudnn.benchmark = True  
+    torch.backends.cudnn.enabled = True  
 
 
 def main(seed):
@@ -270,7 +256,9 @@ def main(seed):
     if len(opt.ckpt_name) > 0:
         prefix += '-' + opt.ckpt_name
 
-    if model_name == 'proto':
+    if model_name == 'ubpf':
+        model = UBPF(sentence_encoder, dot=opt.dot, relation_encoder=relation_encoder)
+    elif model_name == 'proto':
         model = Proto(sentence_encoder, dot=opt.dot, relation_encoder=relation_encoder)
 
     elif model_name == 'proto_yuanwen':
@@ -367,29 +355,14 @@ def main(seed):
         # if acc > 0.9734:
         print(seed)
         return acc
-        # for i in range(n):
-        #     seed = setseed()
-        #     seed_torch(seed)
-        #     acc += framework.eval(model, batch_size, N, K, Q, opt.test_iter, na_rate=opt.na_rate, ckpt=ckpt, pair=opt.pair)
-        #     print(seed)
-        # acc = acc / n
-        # print("RESULT: %.2f" % (acc * 100))
 
 
 if __name__ == "__main__":
-    # 固定种子(测试需要注释掉)
-    # seed = setseed()
-    # # seed = 1234
-    # seed_torch(seed)
-    # while True:
     acc = 0.0
     n = 3
     nums = []
     for i in range(n):
         seed = setseed()
-        # seed = 5530045
-        # seed = 7207431
-        # seed = 9233139
         acc_re = main(seed)
         nums.append(acc_re)
         acc += acc_re
