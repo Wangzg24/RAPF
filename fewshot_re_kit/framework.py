@@ -13,44 +13,53 @@ from torch.nn import functional as F
 from transformers import AdamW, get_linear_schedule_with_warmup
 from tqdm import tqdm
 import json
+from random import randint
 
 import matplotlib.pyplot as plt
-from pylab import *         #支持中文
-# mpl.rcParams['font.sans-serif'] = ['SimHei']
+from pylab import *  # Supports Chinese
+os.environ['CUDA_VISIBLE_DEVICES'] = '2'
 
+
+# mpl.rcParams['font.sans-serif'] = ['SimHei']
 
 def warmup_linear(global_step, warmup_step):
     if global_step < warmup_step:
         return global_step / warmup_step
     else:
         return 1.0
+
+
 def paint(x, y):
-    # 使用plot函数绘制折线图
+    # Use the plot function to draw a line chart.
     plt.plot(x, y)
 
-    # 添加标题和轴标签
+    # Add titles and axis labels
     # plt.title('Simple Plot')
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
 
-    # 保存图表
+    # Save chart
     plt.savefig('plot.png')
+
+
 def save(x, name):
     with open(name, 'a') as file:
-        # 遍历数组中的每个元素
+        # Iterate through each element in the array
 
         file.write(str(x) + '\n')
+
+
 class FewShotREModel(nn.Module):
     def __init__(self, my_sentence_encoder):
         '''
         sentence_encoder: Sentence encoder
-        
+
         You need to set self.cost as your own loss function.
         '''
         nn.Module.__init__(self)
         self.sentence_encoder = nn.DataParallel(my_sentence_encoder)
         self.cost = nn.CrossEntropyLoss()
-    
+
     def forward(self, support, query, N, K, Q):
         '''
         support: Inputs of the support set.
@@ -65,10 +74,11 @@ class FewShotREModel(nn.Module):
     def loss(self, logits, label):
         '''
         logits: Logits with the size (..., class_num)
-        label: Label with whatever size. 
+        label: Label with whatever size.
         return: [Loss] (A single value)
         '''
         N = logits.size(-1)
+        # print(logits)
         return self.cost(logits.view(-1, N), label.view(-1))
 
     def accuracy(self, pred, label):
@@ -78,6 +88,7 @@ class FewShotREModel(nn.Module):
         return: [Accuracy] (A single value)
         '''
         return torch.mean((pred.view(-1) == label.view(-1)).type(torch.FloatTensor))
+
 
 class FewShotREFramework:
 
@@ -97,11 +108,8 @@ class FewShotREFramework:
             self.d = d
             self.d.cuda()
 
-        self.record_train_loss = []
-        self.record_train_epoch = []
+        # torch.autograd.set_detect_anomaly(True)
 
-        self.alpha = nn.Parameter(torch.tensor(1.0))
-    
     def __load_model__(self, ckpt):
         '''
         ckpt: Path of the checkpoint
@@ -113,7 +121,7 @@ class FewShotREFramework:
             return checkpoint
         else:
             raise Exception("No checkpoint found at '%s'" % ckpt)
-    
+
     def item(self, x):
         '''
         PyTorch before and after 0.4
@@ -129,13 +137,13 @@ class FewShotREFramework:
               model_name,
               B, N_for_train, N_for_eval, K, Q,
               na_rate=0,
-              learning_rate=1e-1,
+              learning_rate=1e-5,
               lr_step_size=20000,
               weight_decay=1e-5,
 
               train_iter=30000,
               val_iter=1000,
-              val_step=2000,
+              val_step=1000,  # 2000
               test_iter=3000,
 
               load_ckpt=None,
@@ -168,18 +176,17 @@ class FewShotREFramework:
         '''
         print("Start training...")
 
-
-
+        torch.autograd.set_detect_anomaly(True)  # 开启异常检测
         # Init
         if bert_optim:
             print('Use bert optim!')
             parameters_to_optimize = list(model.named_parameters())
             no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
             parameters_to_optimize = [
-                {'params': [p for n, p in parameters_to_optimize 
-                    if not any(nd in n for nd in no_decay)], 'weight_decay': 0.01},
                 {'params': [p for n, p in parameters_to_optimize
-                    if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
+                            if not any(nd in n for nd in no_decay)], 'weight_decay': 0.01},
+                {'params': [p for n, p in parameters_to_optimize
+                            if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
             ]
             if use_sgd_for_bert:
                 optimizer = torch.optim.SGD(parameters_to_optimize, lr=learning_rate)
@@ -187,14 +194,15 @@ class FewShotREFramework:
                 optimizer = AdamW(parameters_to_optimize, lr=learning_rate, correct_bias=False)
             if self.adv:
                 optimizer_encoder = AdamW(parameters_to_optimize, lr=1e-5, correct_bias=False)
-            scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=warmup_step, num_training_steps=train_iter) 
+            scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=warmup_step,
+                                                        num_training_steps=train_iter)
         else:
             optimizer = pytorch_optim(model.parameters(),
-                    learning_rate, weight_decay=weight_decay)
+                                      learning_rate, weight_decay=weight_decay)
             if self.adv:
                 optimizer_encoder = pytorch_optim(model.parameters(), lr=adv_enc_lr)
-            scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=lr_step_size)
 
+            scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=lr_step_size)
         if self.adv:
             optimizer_dis = pytorch_optim(self.d.parameters(), lr=adv_dis_lr)
 
@@ -227,55 +235,51 @@ class FewShotREFramework:
         iter_right_dis = 0.0
         iter_sample = 0.0
         for it in range(start_iter, start_iter + train_iter):
+            # N_for_train = randint(3, 9)
             if pair:
                 batch, label = next(self.train_data_loader)
                 if torch.cuda.is_available():
                     for k in batch:
                         batch[k] = batch[k].cuda()
                     label = label.cuda()
-                logits, pred = model(batch, N_for_train, K, 
-                        Q * N_for_train + na_rate * Q)
+                logits, pred = model(batch, N_for_train, K,
+                                     Q * N_for_train + na_rate * Q)
             else:
-                support, query, label, rel_text = next(self.train_data_loader)
+                support, query, label, rel_text, support_head_entity, support_till_entity, query_head_entity, query_till_entity = next(
+                    self.train_data_loader)
                 if torch.cuda.is_available():
                     for k in support:
                         support[k] = support[k].cuda()
                     for k in query:
                         query[k] = query[k].cuda()
-                    
+
                     for k in rel_text:
                         rel_text[k] = rel_text[k].cuda()
-                    
+
                     label = label.cuda()
-
-
-
-                
-                #here get rel_text
-                #import pdb
-                #pdb.set_trace()
-
-                logits, pred, tri_loss = model(support, query, rel_text,
-                        N_for_train, K, Q * N_for_train + na_rate * Q, label)
-                # logits_task, logits_distillation, pred_task, pred_distillation, tri_loss = model(support, query, rel_text,
-                #                                N_for_train, K, Q * N_for_train + na_rate * Q, label)
+                    
+                flag = 'train'
+                logits, pred = model(support, query, rel_text, support_head_entity, support_till_entity,
+                                               query_head_entity, query_till_entity, N_for_train, K,
+                                               Q * N_for_train + na_rate * Q, label, flag)
             loss = model.loss(logits, label) / float(grad_iter)
-            
-            
+
             right = model.accuracy(pred, label)
+            
             if fp16:
                 with amp.scale_loss(loss, optimizer) as scaled_loss:
                     scaled_loss.backward()
                 # torch.nn.utils.clip_grad_norm_(amp.master_params(optimizer), 10)
             else:
+                # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 10)
-            
+
             if it % grad_iter == 0:
                 optimizer.step()
                 scheduler.step()
                 optimizer.zero_grad()
-            
+
             # Adv part
             if self.adv:
                 support_adv = next(self.adv_data_loader)
@@ -285,22 +289,22 @@ class FewShotREFramework:
 
                 features_ori = model.sentence_encoder(support)
                 features_adv = model.sentence_encoder(support_adv)
-                features = torch.cat([features_ori, features_adv], 0) 
+                features = torch.cat([features_ori, features_adv], 0)
                 total = features.size(0)
                 dis_labels = torch.cat([torch.zeros((total // 2)).long().cuda(),
-                    torch.ones((total // 2)).long().cuda()], 0)
+                                        torch.ones((total // 2)).long().cuda()], 0)
                 dis_logits = self.d(features)
                 loss_dis = self.adv_cost(dis_logits, dis_labels)
                 _, pred = dis_logits.max(-1)
                 right_dis = float((pred == dis_labels).long().sum()) / float(total)
-                
+
                 loss_dis.backward(retain_graph=True)
                 optimizer_dis.step()
                 optimizer_dis.zero_grad()
                 optimizer_encoder.zero_grad()
 
                 loss_encoder = self.adv_cost(dis_logits, 1 - dis_labels)
-    
+
                 loss_encoder.backward(retain_graph=True)
                 optimizer_encoder.step()
                 optimizer_dis.zero_grad()
@@ -313,23 +317,26 @@ class FewShotREFramework:
             iter_right += self.item(right.data)
             iter_sample += 1
             if self.adv:
-                sys.stdout.write('step: {0:4} | loss: {1:2.6f}, accuracy: {2:3.2f}%, dis_loss: {3:2.6f}, dis_acc: {4:2.6f}'
-                    .format(it + 1, iter_loss / iter_sample, 
-                        100 * iter_right / iter_sample,
-                        iter_loss_dis / iter_sample,
-                        100 * iter_right_dis / iter_sample) + '\r')
+                sys.stdout.write(
+                    'step: {0:4} | loss: {1:2.6f}, accuracy: {2:3.2f}%, dis_loss: {3:2.6f}, dis_acc: {4:2.6f}'
+                    .format(it + 1, iter_loss / iter_sample,
+                            100 * iter_right / iter_sample,
+                            iter_loss_dis / iter_sample,
+                            100 * iter_right_dis / iter_sample) + '\r')
             else:
                 # self.record_train_epoch.append(it + 1)
                 # save(it + 1, 'epoch.txt')
-                self.record_train_loss.append(iter_loss / iter_sample)
-                save(iter_loss / iter_sample, 'loss.txt')
+                # self.record_train_loss.append(iter_loss / iter_sample)
+                # save(iter_loss / iter_sample, 'loss.txt')
 
-                sys.stdout.write('step: {0:4} | loss: {1:2.6f}, accuracy: {2:3.2f}%'.format(it + 1, iter_loss / iter_sample, 100 * iter_right / iter_sample) + '\r')
+                sys.stdout.write(
+                    'step: {0:4} | loss: {1:2.6f}, accuracy: {2:3.2f}%'.format(it + 1, iter_loss / iter_sample,
+                                                                               100 * iter_right / iter_sample) + '\r')
             sys.stdout.flush()
 
             if (it + 1) % val_step == 0:
-                acc = self.eval(model, B, N_for_eval, K, Q, val_iter, 
-                        na_rate=na_rate, pair=pair)
+                acc = self.eval(model, B, N_for_eval, K, Q, val_iter,
+                                na_rate=na_rate, pair=pair)
                 model.train()
                 if acc > best_acc:
                     print('Best checkpoint')
@@ -340,18 +347,18 @@ class FewShotREFramework:
                 iter_right = 0.
                 iter_right_dis = 0.
                 iter_sample = 0.
-                
+
         print("\n####################\n")
         print("Finish training " + model_name)
         # paint(record_train_epoch, record_train_loss)
 
     def eval(self,
-            model,
-            B, N, K, Q,
-            eval_iter,
-            na_rate=0,
-            pair=False,
-            ckpt=None): 
+             model,
+             B, N, K, Q,
+             eval_iter,
+             na_rate=0,
+             pair=False,
+             ckpt=None):
         '''
         model: a FewShotREModel instance
         B: Batch size
@@ -363,7 +370,7 @@ class FewShotREFramework:
         return: Accuracy
         '''
         print("")
-        
+
         model.eval()
         if ckpt is None:
             print("Use val dataset")
@@ -380,13 +387,13 @@ class FewShotREFramework:
                     own_state[name].copy_(param)
             eval_dataset = self.test_data_loader
             # eval_dataset = self.val_data_loader
-        
+
         ###TODO
-        #import pdb
-        #pdb.set_trace()
-        #import pdb
-        #pdb.set_trace()
-        
+        # import pdb
+        # pdb.set_trace()
+        # import pdb
+        # pdb.set_trace()
+
         iter_right = 0.0
         iter_sample = 0.0
         with torch.no_grad():
@@ -395,37 +402,38 @@ class FewShotREFramework:
                     batch, label = next(eval_dataset)
                     if torch.cuda.is_available():
                         for k in batch:
-                            batch[k] = batch[k].cuda() #batch[k].shape [400, 128]
-                            #import pdb
-                            #pdb.set_trace()
-                        label = label.cuda() #label.shape [80]
+                            batch[k] = batch[k].cuda()  # batch[k].shape [400, 128]
+                            # import pdb
+                            # pdb.set_trace()
+                        label = label.cuda()  # label.shape [80]
                     logits, pred = model(batch, N, K, Q * N + Q * na_rate)
-                    #pred.shape [80]
-                    
+                    # pred.shape [80]
+
                 else:
-                    support, query, label, rel_text = next(eval_dataset)
+                    # support, query, label, rel_text = next(eval_dataset)
+                    support, query, label, rel_text, support_head_entity, support_till_entity, query_head_entity, query_till_entity = next(
+                        eval_dataset)
                     if torch.cuda.is_available():
                         for k in support:
                             support[k] = support[k].cuda()
                         for k in query:
                             query[k] = query[k].cuda()
-                        
+
                         for k in rel_text:
-                            rel_text[k] = rel_text[k].cuda()    
-                        
+                            rel_text[k] = rel_text[k].cuda()
+
                         label = label.cuda()
-                    logits, pred, tri_loss = model(support, query, rel_text, N, K, Q * N + Q * na_rate, label)
-                    # logits_task, logits_distillation, pred_task, pred_distillation, tri_loss = model(support, query, rel_text, N, K, Q * N + Q * na_rate, label)
-                
+                    flag = 'val-test'
+                    logits, pred = model(support, query, rel_text, support_head_entity, support_till_entity,
+                                                   query_head_entity, query_till_entity, N, K, Q * N + Q * na_rate,
+                                                   label, flag)
 
                 right = model.accuracy(pred, label)
                 iter_right += self.item(right.data)
                 iter_sample += 1
 
-                sys.stdout.write('[EVAL] step: {0:4} | accuracy: {1:3.2f}%'.format(it + 1, 100 * iter_right / iter_sample) + '\r')
+                sys.stdout.write(
+                    '[EVAL] step: {0:4} | accuracy: {1:3.2f}%'.format(it + 1, 100 * iter_right / iter_sample) + '\r')
                 sys.stdout.flush()
             print("")
         return iter_right / iter_sample
-        
-        
-        
