@@ -87,13 +87,13 @@ class FewRelDataset(data.Dataset):
             relation_set['word'].append(rel_text)
             relation_set['mask'].append(rel_text_mask)
 
-            # 随机K+Q个实例
+            # Random K+Q instances
             indices = np.random.choice(
                     list(range(len(self.json_data[class_name]))),
                     self.K + self.Q, False)
             # print(indices)
 
-            # 选择前K+Q个实例
+            # Select the first K+Q instances
             # indices = list(range(2))
         
 
