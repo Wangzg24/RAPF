@@ -292,17 +292,17 @@ class BERTSentenceEncoder(nn.Module):
         # token -> index
         tokens = ['[CLS]']
         name, description = raw_tokens
-        # [CLS] + 标签词 + [SEP]
+        # [CLS] + label words + [SEP]
         for token in name.split(' '):
             token = token.lower()
             tokens += self.tokenizer.tokenize(token)
         tokens.append('[SEP]')
 
-        # [CLS] 标签词 + [SEP] + 标签描述
+        # [CLS] label words + [SEP] + label descriptions
         # for token in description.split(' '):
-            # token = token.lower()
-            # tokens += self.tokenizer.tokenize(token)
-        # 只用标签描述需添加分割符
+        #     token = token.lower()
+        #     tokens += self.tokenizer.tokenize(token)
+        # If you only use tags to describe, you need to add a separator.
         # tokens.append('[SEP]')
 
         indexed_tokens = self.tokenizer.convert_tokens_to_ids(tokens)
