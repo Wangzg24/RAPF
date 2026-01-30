@@ -31,7 +31,7 @@ class UBPF(fewshot_re_kit.framework.FewShotREModel):
         self.hidden_size = 768
 
         self.dyarea = BayesianDynamicBoundaryPrototypicalNetwork(
-                                                encoder_dim=768,
+                                                encoder_dim=768 * 2,
                                                 num_classes=3,
                                                 prior_strength=1.0
                                             )
@@ -89,6 +89,5 @@ class UBPF(fewshot_re_kit.framework.FewShotREModel):
         
         support = support + rel_rep # [B, N, D]
         logits = self.dyarea(support, query)
-        # logits = self.__batch_dist__(support, query)
         _, pred = torch.max(logits.view(-1, N), 1)
         return logits, pred
