@@ -30,7 +30,7 @@ class BayesianDynamicBoundaryPrototypicalNetwork(nn.Module):
     # ===========================================================
     # 🔹 Stable inverse function: Prioritize Cholesky inversion, and backtrack to pseudo-inverse in case of anomalies.
     # ===========================================================
-    def robust_inverse(self, sigma, eps_chol=1e-4, eps_pinv=1e-3):
+    def robust_inverse(self, sigma):
         try:
             L = torch.linalg.cholesky(sigma)
             sigma_inv = torch.cholesky_inverse(L)
@@ -139,5 +139,6 @@ class BayesianDynamicBoundaryPrototypicalNetwork(nn.Module):
         # Step 3: Batch Bhattacharyya Distance
         distances = self.bhattacharyya_distance(query_means, query_covs, class_means_exp, class_covs_exp)
         logits = -distances  # smaller distance → higher logit
-        return logits, 0.0
+        return logits
+
 
