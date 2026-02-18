@@ -49,6 +49,29 @@ class UBPF(fewshot_re_kit.framework.FewShotREModel):
         return self.__dist__(S.unsqueeze(1), Q.unsqueeze(2), 3)
         # return self.__dist__(S, Q.unsqueeze(2), 3)
     
+    # Adding noise artificially
+    def shuffle_n_dimension(self, x):
+        """
+        Shuffle the N-dimensional tensor (keeping B and D unchanged).
+
+        parameter:
+            x: Input tensor with shape [B, N, D]
+
+        return:
+            shuffled_x: The shuffled tensor, still in the shape [B, N, D]
+        """
+        B, N, D = x.shape
+
+        idx = torch.argsort(torch.rand(B, N), dim=1)  # [B, N] Randomly shuffle features
+        # idx = torch.tensor([[0,1,2,3,3],[0,1,2,3,3]]) # noise 20% shuffle features
+        # idx = torch.tensor([[0,1,2,4,3],[0,1,2,4,3]]) # noise 40%
+        # idx = torch.tensor([[0,1,3,4,2],[0,1,3,4,2]]) # noise 60%
+        # idx = torch.tensor([[0,3,1,4,2],[0,3,1,4,2]]) # noise 80%
+        # idx = torch.tensor([[3,0,1,4,2],[3,0,1,4,2]]) # noise 100%
+
+        # Expand index dimensions to match tensors
+        idx = idx.unsqueeze(-1).expand(-1, -1, D)  # [B, N, D]
+        
     def forward(self, support, query, rel_txt, support_head_entity, support_till_entity, query_head_entity, query_till_entity, N, K, total_Q, label, flag):
         '''
         support: Inputs of the support set.
