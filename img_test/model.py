@@ -57,11 +57,11 @@ class ProtoNet(nn.Module):
     def __init__(self):
         super().__init__()
         self.encoder = ConvEncoder()
-        # self.dyarea = BayesianDynamicBoundaryPrototypicalNetwork(
-        #                                         encoder_dim=64,
-        #                                         num_classes=7,
-        #                                         prior_strength=1.0
-        #                                     )
+        self.dyarea = BayesianDynamicBoundaryPrototypicalNetwork(
+                                                encoder_dim=64,
+                                                num_classes=9,
+                                                prior_strength=1.0
+                                            )
 
     def forward(self, support, query, N, K, Q):
         B, _, _, C, H, W = support.shape
@@ -76,12 +76,11 @@ class ProtoNet(nn.Module):
 
         support_emb = support_emb.view(B, N, K, D)
         query_emb = query_emb.view(B, N*Q, D)
-        # print()
         prototypes = support_emb.mean(dim=2)
 
-        # support_emb = support_emb.view(B, N, D)
-        # logits = self.dyarea(support_emb, query_emb)
+        support_emb = support_emb.view(B, N, D)
+        logits = self.dyarea(support_emb, query_emb)
         
-        logits = -euclidean_dist(query_emb, prototypes)
+        # logits = -euclidean_dist(query_emb, prototypes)
 
         return logits
