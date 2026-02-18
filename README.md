@@ -7,6 +7,7 @@
 3. In the "fewshot_re_kit" are related configuration files, including "data_loader", "sentence_encoder", etc.
 4. All models are saved in the "models". The model we proposed is marked as "ubpf".
 5. The "Pretrain" saves configuration files related to embedding and encoding. Download from https://pan.baidu.com/s/1VThkF9ieBEEeuLZWKJW0Xw?pwd=qqi9.
+6. Folder "img_test" represents UBPF's attempt in the field of one-shot image classification.
 
 ## 2. Train
 
@@ -100,5 +101,6 @@ However, we recommend the first command.
 ## 5. Cite
 
 If you would like to cite this article or use data published in this article, please use the citation format uploaded later.
+
 
 
