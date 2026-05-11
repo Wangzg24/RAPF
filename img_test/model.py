@@ -24,7 +24,6 @@ class ConvEncoder(nn.Module):
             block(hidden, hidden),
         )
 
-        # 🔥 关键：把 5x5 变成 1x1
         self.pool = nn.AdaptiveAvgPool2d(1)
 
     def forward(self, x):
