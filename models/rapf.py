@@ -18,7 +18,7 @@ import os
 os.environ['CUDA_VISIBLE_DEVICES'] = '2'
 
 
-class UBPF(fewshot_re_kit.framework.FewShotREModel):
+class RAPF(fewshot_re_kit.framework.FewShotREModel):
 
     def __init__(self, sentence_encoder, dot=False, relation_encoder=None, N=5, Q=1):
         fewshot_re_kit.framework.FewShotREModel.__init__(self, sentence_encoder)
