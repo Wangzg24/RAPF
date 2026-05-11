@@ -2,10 +2,10 @@
 
 ## 1. Files Introduction
 
-1. The "Checkpoint" is used to save the trained model. The model we proposed is saved in the "ubpf" folder. To facilitate code reproduction, we provide four trained models: 3-1-1e-5.pth.tar, 5-1-1e-5.pth.tar, 7-1-1e-5.pth.tar, and 9-1-1e-5.pth.tar. You can download the model at https://pan.baidu.com/s/1WAtL5EhP958M4bxUd944wQ?pwd=65x8.
+1. The "Checkpoint" is used to save the trained model. The model we proposed is saved in the "rapf" folder. To facilitate code reproduction, we provide four trained models: 3-1-1e-5.pth.tar, 5-1-1e-5.pth.tar, 7-1-1e-5.pth.tar, and 9-1-1e-5.pth.tar. You can download the model at https://pan.baidu.com/s/1WAtL5EhP958M4bxUd944wQ?pwd=65x8.
 2. The datasets we use is in the "data". It includes the training set "train_fewrel", the validation set "val_fewrel", and two test sets "test_fewrel"  (named FewRel 1.0 in the paper), "val_pubmed_new" (named FewRel 2.0 in the paper), and test_nyt (named NYT in the paper). There are three files containing the class names and descriptions. The "pid2name" corresponds to fewrel 1.0 dataset. The "newpidname" corresponds to fewrel 2.0 dataset. The "pid2_nyt" corresponds to NYT dataset. Download from https://pan.baidu.com/s/1lkIcSXSDcAejeFhei6j0DA?pwd=cye7.
 3. In the "fewshot_re_kit" are related configuration files, including "data_loader", "sentence_encoder", etc.
-4. All models are saved in the "models". The model we proposed is marked as "ubpf".
+4. All models are saved in the "models". The model we proposed is marked as "rapf".
 5. The "Pretrain" saves configuration files related to embedding and encoding. Download from https://pan.baidu.com/s/1VThkF9ieBEEeuLZWKJW0Xw?pwd=qqi9.
 6. Folder "img_test" represents RAPF's attempt in the field of one-shot image classification.
 
@@ -22,9 +22,9 @@ Alternatively, you can also train the model using the following python command.
 ```
 python train_demo.py \
     --trainN 3 --N 3 --K 1 --Q 1 --dot \
-    --model ubpf --encoder bert --hidden_size 768 --val_step 2000 --lr 1e-5 \
+    --model rapf --encoder bert --hidden_size 768 --val_step 2000 --lr 1e-5 \
     --pretrain_ckpt pretrain \
-    --batch_size 2 --save_ckpt checkpoint/ubpf/3-1-1e-5.pth.tar \
+    --batch_size 2 --save_ckpt checkpoint/rapf/3-1-1e-5.pth.tar \
     --cat_entity_rep \
     --backend_model bert
 ```
@@ -64,9 +64,9 @@ Alternatively, you can also test the model using the following python command.
 ```
 python test_demo.py \
     --trainN 3 --N 3 --K 1 --Q 1 --dot \
-    --model ubpf --encoder bert --hidden_size 768 --val_step 2000 --test test_fewrel \
+    --model rapf --encoder bert --hidden_size 768 --val_step 2000 --test test_fewrel \
     --batch_size 2 --only_test \
-    --load_ckpt checkpoint/checkpoint/ubpf/3-1-1e-5.pth.tar \
+    --load_ckpt checkpoint/checkpoint/rapf/3-1-1e-5.pth.tar \
     --pretrain_ckpt pretrain \
     --cat_entity_rep \
     --test_iter 1000 \
@@ -95,6 +95,7 @@ However, we recommend the first command.
 | :------------ | :----------: | :----------: | :-----------: | :-----------: |
 |   FewRel1.0   |  94.57±0.30  |  91.53±0.22  |  87.49±0.17   |  85.98±0.27   |
 |   FewRel2.0   |  85.92±0.36  |  82.24±0.40  |  72.81±0.19   |  68.93±0.13   |
+|      NYT      |  91.82±0.10  |  87.87±0.11  |  83.67±0.08   |  80.95±0.12   |
 
 
 
