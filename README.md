@@ -1,4 +1,4 @@
-# **A Universal Bayesian Prototype Learning Framework For Modeling Class Uncertainty** **(UBPF)**
+# **Risk-Aware Probabilistic Prototype Learning Framework for Reliable One-Shot Classification** **(RAPF)**
 
 ## 1. Files Introduction
 
