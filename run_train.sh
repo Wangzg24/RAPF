@@ -1,5 +1,5 @@
 LR=1e-5
-ModelType=ubpf
+ModelType=rapf
 N=3
 K=1
 
