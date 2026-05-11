@@ -4,7 +4,7 @@ from fewshot_re_kit.framework import FewShotREFramework
 from fewshot_re_kit.sentence_encoder import CNNSentenceEncoder, BERTSentenceEncoder, BERTPAIRSentenceEncoder, \
     RobertaSentenceEncoder, RobertaPAIRSentenceEncoder, BERTRelationEncoder
 import models
-from models.ubpf import UBPF
+from models.rapf import RAPF
 import sys
 import torch
 from torch import optim, nn
@@ -256,8 +256,8 @@ def main(seed):
     if len(opt.ckpt_name) > 0:
         prefix += '-' + opt.ckpt_name
 
-    if model_name == 'ubpf':
-        model = UBPF(sentence_encoder, dot=opt.dot, relation_encoder=relation_encoder)
+    if model_name == 'rapf':
+        model = RAPF(sentence_encoder, dot=opt.dot, relation_encoder=relation_encoder)
     elif model_name == 'proto':
         model = Proto(sentence_encoder, dot=opt.dot, relation_encoder=relation_encoder)
     elif model_name == 'gnn_get':
